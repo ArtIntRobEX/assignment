@@ -7,6 +7,6 @@ fi
 
 PROBLEM_FILE="$1"
 DOMAIN_FILE="maindomain.pddl"
-ENHSP_DIR="enhsp-19/nbdist"
+ENHSP_DIR="."
 
-java -jar "$ENHSP_DIR/enhsp-19.jar" enhsp.Main -o "$DOMAIN_FILE" -f "$PROBLEM_FILE"
+java -jar "$ENHSP_DIR/enhsp-19.jar" -o "$DOMAIN_FILE" -f "$PROBLEM_FILE"
