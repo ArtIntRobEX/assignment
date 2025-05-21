@@ -35,8 +35,8 @@
         (crate crate2)
         (not (isloaded crate1))
         (not (isloaded crate2))
-        (at_company crate1)
-        (at_company crate2)
+        (not (iscarried crate1))
+        (not (iscarried crate2))
         (= (position crate1) 10)
         (= (position crate2) 20)
         (= (weight crate1) 70)
@@ -57,8 +57,12 @@
         (loader loader2)
         (= (loadertimer loader1) 0)
         (= (loadertimer loader2) 0)
-        (not (busyloading loader1)) 
-        (not (busyloading loader2)) 
+        (not (loading loader1))
+        (not (loading loader2))
+        (not (busyloading loader1 crate1)) 
+        (not (busyloading loader2 crate1))
+        (not (busyloading loader1 crate2)) 
+        (not (busyloading loader2 crate2)) 
         (not (ischeap loader2))
         (ischeap loader1)
 
@@ -70,7 +74,7 @@
     (:goal
         (and 
             (isloaded crate1)
-            (isloaded crate2)
+            ; (isloaded crate2)
         )
     )
 

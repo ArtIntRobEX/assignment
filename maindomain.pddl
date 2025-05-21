@@ -5,17 +5,17 @@
 
     (:predicates
         (free ?m - mover)
-        (carry ?b - crate ?m - mover) 
+        (carry ?c - crate ?m - mover) 
+        (iscarried ?c - crate )
         (moving ?m - mover) 
-        (topositive ?m)
-        (busyloading ?l - loader ?b - crate)
-        (isloaded ?b - crate)
+        (loading ?l - loader)
+        (busyloading ?l - loader ?c - crate)
+        (isloaded ?c - crate)
         (equal ?m1 - mover ?m2 - mover)
         (ischeap ?l - loader)
-        (isfragile ?b - crate)
+        (isfragile ?c - crate)
         (currentgroupset)
         (freeloader ?l - loader)
-        (at_company ?b - crate)
         (coeff_set)
     )
 
@@ -23,10 +23,10 @@
         (velocity ?m - mover)
         (max_vel ?m - mover)
         (rob_position ?m - mover)
-        (position ?b - crate)
+        (position ?c - crate)
         (loadertimer ?l - loader)
-        (weight ?b - crate)
-        (belong ?b - crate)
+        (weight ?c - crate)
+        (belong ?c - crate)
         (currentgroup)
         (numofgroup ?g - group)
         (elementspergroup ?g - group)
@@ -34,7 +34,7 @@
         (maxbattery)
     )
 
-    (:process drain_battery
+    (:process consuming_battery
         :parameters (?m - mover)
         :precondition (and
             (moving ?m) (> (battery ?m) 0)(>(rob_position ?m)1)
@@ -42,7 +42,7 @@
         :effect (decrease (battery ?m) (* #t 1)
         )
     )
-    (:event charging_battery
+    (:event charge_battery
         :parameters (?m - mover)
         :precondition (and
             (not(moving ?m))(=(rob_position ?m)0) (< (battery ?m) (maxbattery))(free ?m)
@@ -52,28 +52,28 @@
         )
     )    
     
-    (:action start_forward
+    (:action move_to_crate
         :parameters (?m - mover)
         :precondition (and 
             (not (moving ?m)) (= (rob_position ?m) 0) (free ?m)
         )
         :effect (and 
-            (moving ?m) (topositive ?m) 
+            (moving ?m)  
         )
     )
-    (:process goto_pickup
+    (:process moving_to_crate
         :parameters (?m - mover)
         :precondition (and
-            (moving ?m) (topositive ?m) (free ?m) 
+            (moving ?m) (free ?m) 
         )
         :effect (and
             (increase (rob_position ?m) (* #t (velocity ?m)))
         )
     )
-    (:action stop_at_crate
-        :parameters (?m - mover ?b - crate)
+    (:event stop_at_crate
+        :parameters (?m - mover ?c - crate)
         :precondition (and
-            (moving ?m) (topositive ?m) (= (rob_position ?m) (position ?b)) (not (isloaded ?b)) (> (position ?b) 0) 
+            (moving ?m) (>= (rob_position ?m) (position ?c)) (not (isloaded ?c)) (> (position ?c) 0) 
         )
         :effect (and
             (not (moving ?m))
@@ -91,190 +91,232 @@
     )
     
     ; for picking up stray crates
-    (:action pickup
-        :parameters (?m - mover ?b - crate )
+    (:action pickup_crate
+        :parameters (?m - mover ?c - crate )
         :precondition (and
-            (not (moving ?m)) (topositive ?m) (= (rob_position ?m) (position ?b)) (not (isloaded ?b)) (> (position ?b) 0) (<= (weight ?b) 50) (not (isfragile ?b)) (free ?m)
-            (not (currentgroupset)) (= (belong ?b) 0) (= (currentgroup) 0)
+            (not (moving ?m)) (= (rob_position ?m) (position ?c)) 
+            (not (iscarried ?c )) (not (isloaded ?c)) (free ?m)
+            (> (position ?c) 0) (<= (weight ?c) 50) (not (isfragile ?c)) 
+            (not (currentgroupset)) (= (belong ?c) 0) (= (currentgroup) 0)
             (> (battery ?m) 0)
-            (at_company ?b)
         )
         :effect (and
-            (moving ?m) (not (topositive ?m)) (carry ?b ?m) (not (free ?m))
-            (assign (velocity ?m) (/ 100 (weight ?b)))
-            ;(assign (velocity ?m) (/ (* (position ?b) (weight ?b)) 100))
-            (not (at_company ?b))
+            (moving ?m) (carry ?c ?m) (iscarried ?c) (not (free ?m))
+            (assign (velocity ?m) (/ 100 (weight ?c)))
+            ;(assign (velocity ?m) (/ (* (position ?c) (weight ?c)) 100))
         )
     )
     ; for setting new groups or following previously-set groups
-    (:action pickup_per_gruppo
-        :parameters (?m - mover ?b - crate ?g - group)
+    (:action pickup_crate_same_group
+        :parameters (?m - mover ?c - crate ?g - group)
         :precondition (and
             (> (battery ?m) 0)
-            (not (moving ?m)) (topositive ?m) (= (rob_position ?m) (position ?b)) (not (isloaded ?b)) (> (position ?b) 0) (<= (weight ?b) 50) (not (isfragile ?b)) (free ?m)
-            (= (belong ?b) (numofgroup ?g)) (> (belong ?b) 0)
-            (or (not (currentgroupset)) (= (belong ?b) (currentgroup)) )
-            (at_company ?b)
+            (not (moving ?m)) (= (rob_position ?m) (position ?c)) 
+            (not (iscarried ?c )) (not (isloaded ?c)) (free ?m)
+            (> (position ?c) 0) (<= (weight ?c) 50) (not (isfragile ?c)) 
+            (= (belong ?c) (numofgroup ?g)) (> (belong ?c) 0)
+            (or (not (currentgroupset)) (= (belong ?c) (currentgroup)) )
         )
         :effect (and
-            (assign (currentgroup) (belong ?b)) 
+            (assign (currentgroup) (belong ?c)) 
             (currentgroupset) 
             (decrease (elementspergroup ?g) 1) 
-            (moving ?m) 
-            (not (topositive ?m)) 
-            (carry ?b ?m) 
-            (not (free ?m))
-            (assign (velocity ?m) (/ 100 (weight ?b)))
-            ;(assign (velocity ?m) (/ (* (position ?b) (weight ?b)) 100))
-            (not (at_company ?b))
+            (moving ?m)
+            (carry ?c ?m) (iscarried ?c) (not (free ?m))
+            (assign (velocity ?m) (/ 100 (weight ?c)))
+            ;(assign (velocity ?m) (/ (* (position ?c) (weight ?c)) 100))
         )
     )
     
     (:action pickup_by_two
-        :parameters (?m1 - mover ?m2 - mover ?b - crate)
+        :parameters (?m1 - mover ?m2 - mover ?c - crate)
         :precondition (and
             (> (battery ?m1) 0)
             (> (battery ?m2) 0)
             (not (equal ?m1 ?m2)) (free ?m1) (free ?m2)
-            (not (moving ?m1)) (topositive ?m1) (= (rob_position ?m1) (position ?b))
-            (not (moving ?m2)) (topositive ?m2) (= (rob_position ?m2) (position ?b)) 
-            (not (isloaded ?b)) (> (position ?b) 0)
-            (not (currentgroupset)) (= (belong ?b) 0) (= (currentgroup) 0)
-            (at_company ?b)(not (coeff_set))
-        )
-        :effect (and        
-            (moving ?m1) (not (topositive ?m1)) (carry ?b ?m1) (not (free ?m1))
-            (moving ?m2) (not (topositive ?m2)) (carry ?b ?m2) (not (free ?m2))
-            (not (at_company ?b))
-            (coeff_set)
-        )
-    )
-    (:action pickup_by_two_per_gruppo
-        :parameters (?m1 - mover ?m2 - mover ?b - crate ?g - group)
-        :precondition (and
-            (> (battery ?m1) 0)
-            (> (battery ?m2) 0)
-            (not (equal ?m1 ?m2)) (free ?m1) (free ?m2)
-            (not (moving ?m1)) (topositive ?m1) (= (rob_position ?m1) (position ?b))
-            (not (moving ?m2)) (topositive ?m2) (= (rob_position ?m2) (position ?b)) 
-            (not (isloaded ?b)) (> (position ?b) 0)
-            (= (belong ?b) (numofgroup ?g)) (> (belong ?b) 0) 
-            (or (not (currentgroupset)) (= (belong ?b) (currentgroup)))
-            (at_company ?b) 
+            (not (moving ?m1)) (= (rob_position ?m1) (position ?c))
+            (not (moving ?m2)) (= (rob_position ?m2) (position ?c)) 
+            (not (iscarried ?c)) (not (isloaded ?c)) (> (position ?c) 0)
+            (not (currentgroupset)) (= (belong ?c) 0) (= (currentgroup) 0)
             (not (coeff_set))
         )
         :effect (and        
-            (moving ?m1) (not (topositive ?m1)) (carry ?b ?m1) (not (free ?m1))
-            (moving ?m2) (not (topositive ?m2)) (carry ?b ?m2) (not (free ?m2))
-            (assign (currentgroup) (belong ?b)) 
+            (moving ?m1) (carry ?c ?m1) (not (free ?m1))
+            (moving ?m2) (carry ?c ?m2) (not (free ?m2))
+            (iscarried ?c)
+            (coeff_set)
+        )
+    )
+    (:action pickup_by_two_same_group
+        :parameters (?m1 - mover ?m2 - mover ?c - crate ?g - group)
+        :precondition (and
+            (> (battery ?m1) 0)
+            (> (battery ?m2) 0)
+            (not (equal ?m1 ?m2)) (free ?m1) (free ?m2)
+            (not (moving ?m1)) (= (rob_position ?m1) (position ?c))
+            (not (moving ?m2)) (= (rob_position ?m2) (position ?c)) 
+            (not (iscarried ?c)) (not (isloaded ?c)) (> (position ?c) 0)
+            (= (belong ?c) (numofgroup ?g)) (> (belong ?c) 0) 
+            (or (not (currentgroupset)) (= (belong ?c) (currentgroup)))
+            (not (coeff_set))
+        )
+        :effect (and        
+            (moving ?m1) (carry ?c ?m1) (not (free ?m1))
+            (moving ?m2) (carry ?c ?m2) (not (free ?m2))
+            (assign (currentgroup) (belong ?c)) 
             (currentgroupset) 
             (decrease (elementspergroup ?g) 1) 
-            (not (at_company ?b))
             (coeff_set)
-
+            (iscarried ?c)
         )
     )
 
     (:event coeff_changer_light
-        :parameters(?m1 - mover ?m2 - mover ?b - crate)
-        :precondition (and (coeff_set) (carry ?b ?m1) (carry ?b ?m2) (not (equal ?m1 ?m2)) (< (weight ?b) 50))
+        :parameters(?m1 - mover ?m2 - mover ?c - crate)
+        :precondition (and (coeff_set) (carry ?c ?m1) (carry ?c ?m2) (not (equal ?m1 ?m2)) (< (weight ?c) 50))
         :effect(and
-            (assign (velocity ?m1) (/ 150 (weight ?b)))
-            (assign (velocity ?m2) (/ 150 (weight ?b)))
-            ;(assign (velocity ?m1) (/ (* (position ?b) (weight ?b)) 150))
-            ;(assign (velocity ?m2) (/ (* (position ?b) (weight ?b)) 150))
+            (assign (velocity ?m1) (/ 150 (weight ?c)))
+            (assign (velocity ?m2) (/ 150 (weight ?c)))
+            ;(assign (velocity ?m1) (/ (* (position ?c) (weight ?c)) 150))
+            ;(assign (velocity ?m2) (/ (* (position ?c) (weight ?c)) 150))
             (not(coeff_set))
         )
     )
 
     (:event coeff_changer_heavy
-        :parameters(?m1 - mover ?m2 - mover ?b - crate)
-        :precondition (and (coeff_set) (carry ?b ?m1) (carry ?b ?m2) (not (equal ?m1 ?m2)) (>= (weight ?b) 50))
+        :parameters(?m1 - mover ?m2 - mover ?c - crate)
+        :precondition (and (coeff_set) (carry ?c ?m1) (carry ?c ?m2) (not (equal ?m1 ?m2)) (>= (weight ?c) 50))
         :effect(and
-            (assign (velocity ?m1) (/ 100 (weight ?b)))
-            (assign (velocity ?m2) (/ 100 (weight ?b)))
-            ; (assign (velocity ?m1) (/ (* (position ?b) (weight ?b)) 100))
-            ; (assign (velocity ?m2) (/ (* (position ?b) (weight ?b)) 100))
+            (assign (velocity ?m1) (/ 100 (weight ?c)))
+            (assign (velocity ?m2) (/ 100 (weight ?c)))
+            ; (assign (velocity ?m1) (/ (* (position ?c) (weight ?c)) 100))
+            ; (assign (velocity ?m2) (/ (* (position ?c) (weight ?c)) 100))
             (not(coeff_set))
         )
     )
 
-    (:process backto_loader
-        :parameters (?m - mover ?b - crate)
+    (:action move_back
+        :parameters (?m - mover ?c - crate)
         :precondition (and
             (> (battery ?m) 0)
-            (moving ?m) (not (topositive ?m)) 
-            (carry ?b ?m) 
-            (> (rob_position ?m) 0) 
-            (>(position ?b)0) 
+            (carry ?c ?m)
+            (iscarried ?c)
+            (> (rob_position ?m) 0)
+            (> (position ?c) 0)
             (not (free ?m))
         )
-        :effect (and
-            (decrease (rob_position ?m) (* #t (velocity ?m)))
-        )
+        :effect (moving ?m)
     )
 
-    (:action stop_handover
-        :parameters (?m - mover ?b - crate ?l - loader)
+    (:process going_back
+        :parameters (?m - mover)
+        :precondition (moving ?m)
+        :effect (decrease (rob_position ?m) (* #t (velocity ?m)))
+    )
+
+    (:event release_crate
+        :parameters (?m - mover ?c - crate ?l - loader)
         :precondition (and
-            (<= (rob_position ?m) 0) (moving ?m) (not (topositive ?m)) (carry ?b ?m) (not (busyloading ?l ?b)) (<= (weight ?b) 50) (not (isfragile ?b))
+            (<= (rob_position ?m) 0)
+            (moving ?m)
+            (iscarried ?c)
+            (carry ?c ?m)
+            (<= (weight ?c) 50)
+            (not (isfragile ?c))
+            (freeloader ?l)
             (or 
-                (and (= (belong ?b) 0) ) ; (not (currentgroupset)) can be added, it's correct but may reduce parallelism 
-                (and (> (belong ?b) 0) (= (belong ?b) (currentgroup)))
+                (and (= (belong ?c) 0))
+                (and (> (belong ?c) 0) (= (belong ?c) (currentgroup)))
             )
         )
         :effect (and
-            (not (moving ?m)) (topositive ?m) (not (carry ?b ?m)) (busyloading ?l ?b) (free ?m)
-            (assign (rob_position ?m) 0) (assign (position ?b) 0)
+            (not (moving ?m))
+            (not (carry ?c ?m)) (not (iscarried ?c)) (free ?m)
+            (assign (rob_position ?m) 0)
+            (assign (position ?c) 0)
             (assign (velocity ?m) (max_vel ?m))
+            (busyloading ?l ?c)
             (not (freeloader ?l))
-
         )
     )
-    (:action stop_handover_by_two
-        :parameters (?m1 - mover ?m2 - mover ?b - crate ?l - loader)
+    (:event release_crate_by_two
+        :parameters (?m1 - mover ?m2 - mover ?c - crate ?l - loader)
         :precondition (and
             (not (equal ?m1 ?m2))
-            (<= (rob_position ?m1) 0) (moving ?m1) (not (topositive ?m1)) (carry ?b ?m1)
-            (<= (rob_position ?m2) 0) (moving ?m2) (not (topositive ?m2)) (carry ?b ?m2) (or (not (ischeap ?l)) (<= (weight ?b) 50))
-            (not (busyloading ?l ?b))
+            (<= (rob_position ?m1) 0)
+            (moving ?m1)
+            (iscarried ?c)
+            (carry ?c ?m1)
+
+            (<= (rob_position ?m2) 0)
+            (moving ?m2)
+            (carry ?c ?m2)
+
+            (or (not (ischeap ?l)) (<= (weight ?c) 50))
+            (freeloader ?l)
             (or 
-                (and (= (belong ?b) 0) ) ; (not (currentgroupset)) can be added, it's correct but may reduce parallelism 
-                (and (> (belong ?b) 0) (= (belong ?b) (currentgroup)))
+                (and (= (belong ?c) 0))
+                (and (> (belong ?c) 0) (= (belong ?c) (currentgroup)))
             )
         )
         :effect (and
-            (not (moving ?m1)) (topositive ?m1) (not (carry ?b ?m1)) (free ?m1) 
-            (not (moving ?m2)) (topositive ?m2) (not (carry ?b ?m2)) (free ?m2)
-            (busyloading ?l ?b)
-            (assign (rob_position ?m1) 0) (assign (rob_position ?m2) 0) (assign (position ?b) 0)
+            (not (moving ?m1)) (not (carry ?c ?m1)) (free ?m1)
+            (not (moving ?m2)) (not (carry ?c ?m2)) (free ?m2)
+            (not (iscarried ?c))
+            (assign (rob_position ?m1) 0)
+            (assign (rob_position ?m2) 0)
+            (assign (position ?c) 0)
             (assign (velocity ?m1) (max_vel ?m1))
             (assign (velocity ?m2) (max_vel ?m2))
-            ; (assign (x) 100)
+            (busyloading ?l ?c)
             (not (freeloader ?l))
-
         )
     )
-    (:process load
-        :parameters (?l - loader ?b - crate)
-        :precondition (and 
-            (busyloading ?l ?b) 
+
+    (:action start_loading
+        :parameters (?l - loader ?c - crate)
+        :precondition (and
+        (busyloading ?l ?c)
+        (not (isloaded ?c))
+        (not (loading ?l))
+        (not (freeloader ?l))
+        (= (position ?c) 0)
+        (or 
+            (and (< (loadertimer ?l) 4) (not (isfragile ?c))) 
+            (and (< (loadertimer ?l) 6) (isfragile ?c))
+        )
+        )
+        :effect (loading ?l)
+    )
+
+
+    (:process loading_in_progress
+        :parameters (?l - loader ?c - crate)
+        :precondition (and
+            (busyloading ?l ?c)
             (not (freeloader ?l))
-            (or (and (< (loadertimer ?l) 4) (not (isfragile ?b))) (and (< (loadertimer ?l) 6) (isfragile ?b))) 
+            (loading ?l)
         )
         :effect (increase (loadertimer ?l) (* #t 1))
     )
-    (:event doneload
-        :parameters (?b - crate ?l - loader)
+
+    (:event finished_loading
+        :parameters (?c - crate ?l - loader)
         :precondition (and 
-            (busyloading ?l ?b)
+            (loading ?l)
+            (busyloading ?l ?c)
             (not (freeloader ?l))
-            (or (and (= (loadertimer ?l) 4) (not (isfragile ?b))) (and (= (loadertimer ?l) 6) (isfragile ?b))) 
+            (or 
+                (and (= (loadertimer ?l) 4) (not (isfragile ?c))) 
+                (and (= (loadertimer ?l) 6) (isfragile ?c))
+            )
         )
         :effect (and 
             (freeloader ?l)
-            (assign (loadertimer ?l) 0) (not (busyloading ?l ?b)) (isloaded ?b) 
+            (assign (loadertimer ?l) 0)
+            (not (busyloading ?l ?c))
+            (not (loading ?l))
+            (isloaded ?c)
         )
     )
-       
 )
