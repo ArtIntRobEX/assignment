@@ -21,7 +21,7 @@
         (not (moving mover2))
         (= (battery mover1) 20)
         (= (battery mover2) 20)
-        (= (maxbattery) 20)
+        (= (maxBattery) 20)
         
         (= (max_vel mover1) 10)
         (= (max_vel mover2) 10)
@@ -29,38 +29,38 @@
         (= (velocity mover1) 10)
         (= (velocity mover2) 10)
 
-        (not(coeff_set))
+        (not(coefficientSet))
         
         (crate crate1)
         (crate crate2)
-        (not (isloaded crate1))
-        (not (isloaded crate2))
+        (not (isLoaded crate1))
+        (not (isLoaded crate2))
         (at_company crate1)
         (at_company crate2)
         (= (position crate1) 10)
         (= (position crate2) 20)
         (= (weight crate1) 70)
         (= (weight crate2) 20)
-        (not (isfragile crate1))
-        (not (isfragile crate2))
+        (not (isFragile crate1))
+        (not (isFragile crate2))
         (= (belong crate1) 0)
         (= (belong crate2) 1)
         (group A)
-        (= (numofgroup A) 1)
+        (= (numOfGroup A) 1)
         
-        (= (elementspergroup A) 1)
+        (= (elementsPerGroup A) 1)
         
-        (not (currentgroupset))
-        (= (currentgroup) 0)
+        (not (currentGroupSet))
+        (= (currentGroup) 0)
 
         (loader loader1)
         (loader loader2)
-        (= (loadertimer loader1) 0)
-        (= (loadertimer loader2) 0)
+        (= (loaderTimer loader1) 0)
+        (= (loaderTimer loader2) 0)
         (freeloader loader1)
         (freeloader loader2) 
-        (not (ischeap loader2))
-        (ischeap loader1)
+        (not (isCheap loader2))
+        (isCheap loader1)
 
         (freeloader loader1)
         (freeloader loader2)
@@ -69,8 +69,8 @@
 
     (:goal
         (and 
-            (isloaded crate1)
-            (isloaded crate2)
+            (isLoaded crate1)
+            (isLoaded crate2)
         )
     )
 
