@@ -76,8 +76,8 @@
         (loader loader2)
         (= (loaderTimer loader1) 0)
         (= (loaderTimer loader2) 0)
-        (freeloader loader1)
-        (freeloader loader2)
+        (freeLoader loader1)
+        (freeLoader loader2)
         (not (isCheap loader2))
         (isCheap loader1)
 

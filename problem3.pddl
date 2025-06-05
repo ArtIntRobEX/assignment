@@ -5,7 +5,7 @@
         mover1 mover2 - mover
         crate1 crate2 crate3 crate4 - crate
         loader1 loader2 - loader
-        A - group
+        A B - group
     )
 
     (:init
@@ -45,10 +45,6 @@
         (not (isCarried crate2))
         (not (isCarried crate3))
         (not (isCarried crate4))
-        (at_company crate1)
-        (at_company crate2)
-        (at_company crate3)
-        (at_company crate4)
         (= (position crate1) 20)
         (= (position crate2) 20)
         (= (position crate3) 30)
@@ -64,24 +60,30 @@
         (= (belong crate1) 1)
         (= (belong crate2) 1)
         (= (belong crate3) 1)
-        (= (belong crate4) 1)
+        (= (belong crate4) 2)
+
+        (group A)
+        (group B)
         (= (numOfGroup A) 1)
-        (= (elementsPerGroup A) 4)
+        (= (numOfGroup B) 2)
+        
+        (= (elementsPerGroup A) 3)
+        (= (elementsPerGroup B) 1)
         
         (not (currentGroupSet))
-        (= (currentGroup) 0)
+        (= (currentGroup) 1)
 
         (loader loader1)
         (loader loader2)
         (= (loaderTimer loader1) 0)
         (= (loaderTimer loader2) 0)
-        (freeloader loader1)
-        (freeloader loader2)
+        (freeLoader loader1)
+        (freeLoader loader2)
         (not (isCheap loader2))
         (isCheap loader1)
 
-        (freeloader loader1)
-        (freeloader loader2)
+        (freeLoader loader1)
+        (freeLoader loader2)
 
     )
 
